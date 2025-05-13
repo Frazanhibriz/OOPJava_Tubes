@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu | Lesehan Sederhana</title>
+    <style>
+        body {
+            margin: 0;
+            background: url('images/lesehan.png') no-repeat center center/cover;
+            font-family: sans-serif;
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        body,
+        html {
+            height: 100%;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+        }
+
+        .navbar a {
+            color: white;
+            margin-left: 20px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .container {
+            display: flex;
+            margin: 40px;
+            background-color: rgba(240, 240, 230, 0.9);
+            border-radius: 20px;
+            padding: 75px;
+        }
+
+        .sidebar {
+            flex: 1;
+            margin-right: 20px;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar a.menu-link {
+  display: block;
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #b8bea9;
+  border-radius: 15px;
+  cursor: pointer;
+  font-weight: bold;
+  color: black;
+  text-decoration: none;
+  text-align: center;
+}
+
+.sidebar a.menu-link.active {
+  background-color: #848c6e;
+  color: white;
+}
+
+
+        .sidebar li.active {
+            background-color: #848c6e;
+            color: white;
+        }
+
+        .menu-items {
+            flex: 4;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .menu-card {
+            background-color: #d9dbc9;
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .menu-card img {
+            width: 100%;
+            border-radius: 15px;
+        }
+
+        .menu-card h4 {
+            margin: 10px 0 5px 0;
+        }
+
+        .menu-card .price {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .menu-card .add-btn {
+            background-color: #c7935b;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="navbar">
+        <a href="#">HOME</a>
+        <a href="#">MENU</a>
+        <a href="#">MY ORDER</a>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>KATEGORI MENU</h3>
+            <ul>
+                <li><a class="menu-link active" href="LihatMenu.html">All Menu</a></li>
+                <li><a class="menu-link active" href="Makanan.html">MAKANAN</a></li>
+                <li><a class="menu-link active" href="Minuman.html">MINUMAN</a></li>
+                <li><a class="menu-link active" href="Cemilan.html">CAMILAN</a></li>
+              </ul>
+              
+        </div>
+
+        <div class="menu-items">
+            <div class="menu-card">
+                <img src="images/ayambakar.png" alt="Ayam Bakar">
+                <h4>Ayam Bakar</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Ayam Bakar" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/yamgoreng.png" alt="<h4>Ayam Goreng</h4>">
+                <h4>Ayam Goreng</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Ayam Goreng" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/bebekbkr.jpg" alt="Bebek Bakar">
+                <h4>Bebek Bakar</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Bebek Bakar" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/bebekgoreng.jpg" alt="Bebek Goreng">
+                <h4>Bebek Goreng</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Bebek Goreng" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/cumibakar.jpeg" alt="Cumi Bakar">
+                <h4>Cumi Bakar</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Cumi Bakar" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/cumigoreng.jpg" alt="Cumi Gorengr">
+                <h4>Cumi Goreng</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Cumi Goreng" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/capcay.jpg" alt="Capcay">
+                <h4>Capcay</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Capcay" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/nasgor.jpg" alt="Nasi Goreng">
+                <h4>Nasi Goreng</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Nasi Goreng" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/kentng.jpg" alt="Kentang Goreng">
+                <h4>Kentang Goreng</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Kentang Goreng" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/pisgor.jpg" alt="Pisang Goreng Keju">
+                <h4>Pisang Goreng Keju</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Pisang Goreng Keju" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/rotbar.jpg" alt="Roti Bakar Coklat">
+                <h4>Roti Bakar Coklat</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Roti Bakar Coklat" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/tahu.jpg" alt="Tahu Lada Garam">
+                <h4>Tahu Lada Garam</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Tahu Lada Garam" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/air.jpg" alt="Air Mineral">
+                <h4>Air Mineral</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Air Mineral" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/tehmanis.jpeg" alt="Teh Manis">
+                <h4>Teh Manis</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Teh Manis" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/esjeruk.png" alt="Es Jeruk">
+                <h4>Es Jeruk</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Es Jeruk" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/tehhangat.jpg" alt="Teh Hangat">
+                <h4>Teh Hangat</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Teh Hangat" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/jusalpukat.jpg" alt="Jus Alpukat">
+                <h4>Jus Alpukat</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Jus Alpukat" data-price="15000">+</button>
+            </div>
+            <div class="menu-card">
+                <img src="images/jusmangga.jpg" alt="Jus Mangga">
+                <h4>Jus Mangga</h4>
+                <div class="price">15.000</div>
+                <button class="add-btn" data-name="Jus Mangga" data-price="15000">+</button>
+            </div>
+        </div>
+
+        <div class="order-summary" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #d3925f; color: white; padding: 10px 20px; border-radius: 30px; display: flex; gap: 20px;">
+            <span id="item-count">0 Items</span>
+            <span id="total-price">Rp 0</span>
+        </div>
+
+        <script>
+            let itemCount = 0;
+            let totalPrice = 0;
+          
+            document.querySelectorAll('.add-btn').forEach(button => {
+              button.addEventListener('click', () => {
+                const name = button.getAttribute('data-name');
+                const price = parseInt(button.getAttribute('data-price'));
+          
+                itemCount += 1;
+                totalPrice += price;
+          
+                document.getElementById('item-count').textContent = `${itemCount} Items`;
+                document.getElementById('total-price').textContent = `Rp ${totalPrice.toLocaleString('id-ID')}`;
+              });
+            });
+          </script>
+</body>
+
+</html>

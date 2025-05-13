@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pesanan Anda</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+        margin: 0;
+        background: url('images/lesehan.png') no-repeat center center/cover;
+        font-family: sans-serif;
+        background-color: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+    }
+
+    .header img {
+      height: 40px;
+    }
+
+    .header a {
+      color: white;
+      margin: 0 1rem;
+      text-decoration: none;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 80vh;
+      padding: 2rem;
+    }
+
+    .order-box {
+      background-color: #7a8260;
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      display: flex;
+      gap: 2rem;
+      max-width: 800px;
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .order-left, .order-right {
+      flex: 1;
+      background-color: #c1c8a1;
+      padding: 1.5rem;
+      border-radius: 20px;
+    }
+
+    .order-left h3 {
+      margin-top: 0;
+    }
+
+    .order-table {
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .order-table th, .order-table td {
+      text-align: left;
+      padding: 8px;
+    }
+
+    .order-table th {
+      color: white;
+    }
+
+    .total {
+      text-align: right;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 1rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #e1e1e1;
+    }
+
+    .pay-button {
+      display: block;
+      margin: 2rem auto 0;
+      padding: 1rem 3rem;
+      background-color: #c69b6d;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .pay-button::after {
+      content: " >";
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="images/logo.png" alt="logo" />
+    <nav>
+      <a href="TubesPBO.html">HOME</a> |
+      <a href="selectmenu.html">MENU</a> |
+      <a href="#">MY ORDER</a>
+    </nav>
+  </div>
+
+  <div class="container">
+    <div class="order-box">
+      <div class="order-left">
+        <h3>Pesanan Anda:</h3>
+        <table class="order-table">
+          <tr>
+            <th>Item</th>
+            <th>Pcs</th>
+            <th>Harga</th>
+          </tr>
+          <tr>
+            <td>Ayam Bakar</td>
+            <td>2</td>
+            <td>30.000</td>
+          </tr>
+        </table>
+        <div class="total">Total : 30.000</div>
+      </div>
+      <div class="order-right">
+        <label>Nama Pemesan</label>
+        <input type="text" placeholder="Nama" />
+
+        <label>Nomor Meja</label>
+        <input type="number" placeholder="Nomor" />
+      </div>
+    </div>
+  </div>
+
+  <button class="pay-button">Bayar</button>
+
+</body>
+</html>
