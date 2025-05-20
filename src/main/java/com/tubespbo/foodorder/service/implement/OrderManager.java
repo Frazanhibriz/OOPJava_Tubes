@@ -25,9 +25,15 @@ public class OrderManager implements OrderService {
         newOrder.setItems(items);
         newOrder.setPaymentStatus(Order.DEFAULT_STATUS_PAYMENT);
         newOrder.setStatus(Order.STATUS_CONFIRMED);
-        newOrder.setQueueNumber((int) (Math.random() * 1000));
+        newOrder.setQueueNumber(generateQueueNumber());
         newOrder.setTableNumber(tableNumber);
+        newOrder.setTotalPrice(newOrder.calculateTotal());
         return orderRepository.save(newOrder);
+    }
+
+    private int generateQueueNumber() {
+        long count = orderRepository.count();
+        return (int) count + 1;
     }
 
     @Override

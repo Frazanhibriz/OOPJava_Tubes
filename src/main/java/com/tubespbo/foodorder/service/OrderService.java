@@ -12,6 +12,5 @@ public interface OrderService {
     void updateOrderStatus(int id, String status);
     List<Order> getAllOrders();
 
-    // ✅ Tambahan untuk customer melihat order miliknya
     List<Order> getOrdersByCustomer(Customer customer);
 }
