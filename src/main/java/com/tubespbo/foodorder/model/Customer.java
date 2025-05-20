@@ -3,13 +3,21 @@ package com.tubespbo.foodorder.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 
 @Entity
 public class Customer extends User {
+
     @OneToMany
+    @JsonIgnore
     private List<MenuItem> cart = new ArrayList<>();
+
+    public Customer() {
+        super();
+    }
 
     @Override
     public boolean login(String username, String password) {
@@ -33,6 +41,11 @@ public class Customer extends User {
         cart.clear();
     }
 
-    public List<MenuItem> getCart() { return cart; }
-    public void setCart(List<MenuItem> cart) { this.cart = cart; }
+    public List<MenuItem> getCart() {
+        return cart;
+    }
+
+    public void setCart(List<MenuItem> cart) {
+        this.cart = cart;
+    }
 }

@@ -1,6 +1,7 @@
 package com.tubespbo.foodorder.service.implement;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,5 +44,15 @@ public class MenuManager implements MenuService {
     @Override
     public List<MenuItem> searchMenuItemByName(String name) {
         return menuItemRepository.findByNameContainingIgnoreCase(name);
+    }
+
+    @Override
+    public Optional<MenuItem> getMenuItemById(int id) {
+        return menuItemRepository.findById(id);
+    }
+
+    @Override
+    public boolean existsById(int id) {
+        return menuItemRepository.existsById(id);
     }
 }

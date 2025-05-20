@@ -4,6 +4,11 @@ import jakarta.persistence.Entity;
 
 @Entity
 public class Admin extends User {
+
+    public Admin() {
+        super();
+    }
+
     @Override
     public boolean login(String username, String password) {
         return username.equals(getUsername()) && password.equals(getPassword());

@@ -19,13 +19,14 @@ public class OrderManager implements OrderService {
     private OrderRepository orderRepository;
 
     @Override
-    public Order createOrder(Customer customer, List<MenuItem> items) {
+    public Order createOrder(Customer customer, List<MenuItem> items, int tableNumber) {
         Order newOrder = new Order();
         newOrder.setCustomer(customer);
         newOrder.setItems(items);
         newOrder.setPaymentStatus(Order.DEFAULT_STATUS_PAYMENT);
         newOrder.setStatus(Order.STATUS_CONFIRMED);
-        newOrder.setQueueNumber((int) (Math.random() * 1000)); // sementara
+        newOrder.setQueueNumber((int) (Math.random() * 1000));
+        newOrder.setTableNumber(tableNumber);
         return orderRepository.save(newOrder);
     }
 
@@ -42,5 +43,15 @@ public class OrderManager implements OrderService {
             order.setStatus(status);
             orderRepository.save(order);
         }
+    }
+
+    @Override
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    @Override
+    public List<Order> getOrdersByCustomer(Customer customer) {
+        return orderRepository.findByCustomer(customer);
     }
 }

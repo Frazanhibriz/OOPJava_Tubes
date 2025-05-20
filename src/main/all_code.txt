@@ -1,0 +1,1061 @@
+package com.tubespbo.foodorder.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.Table;
+
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Table(name = "users") // ← FIX: ubah nama tabel agar tidak bentrok dengan keyword
+public abstract class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    private String username;
+    private String password;
+    private String name;
+    private String noTelp;
+    private String role; // "ADMIN" atau "CUSTOMER"
+
+    public User() {}
+
+    public User(String username, String password, String name, String noTelp, String role) {
+        this.username = username;
+        this.password = password;
+        this.name = name;
+        this.noTelp = noTelp;
+        this.role = role;
+    }
+
+    public abstract boolean login(String username, String password);
+    public abstract void logout();
+
+    // Getters & Setters
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getNoTelp() {
+        return noTelp;
+    }
+
+    public void setNoTelp(String noTelp) {
+        this.noTelp = noTelp;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+}
+
+package com.tubespbo.foodorder.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+
+@Entity
+public class Customer extends User {
+
+    @OneToMany
+    @JsonIgnore
+    private List<MenuItem> cart = new ArrayList<>();
+
+    public Customer() {
+        super();
+    }
+
+    @Override
+    public boolean login(String username, String password) {
+        return username.equals(getUsername()) && password.equals(getPassword());
+    }
+
+    @Override
+    public void logout() {
+        System.out.println("Customer logged out.");
+    }
+
+    public void addToCart(MenuItem item) {
+        cart.add(item);
+    }
+
+    public void removeFromCart(MenuItem item) {
+        cart.remove(item);
+    }
+
+    public void clearCart() {
+        cart.clear();
+    }
+
+    public List<MenuItem> getCart() {
+        return cart;
+    }
+
+    public void setCart(List<MenuItem> cart) {
+        this.cart = cart;
+    }
+}
+
+package com.tubespbo.foodorder.model;
+
+import jakarta.persistence.Entity;
+
+@Entity
+public class Admin extends User {
+
+    public Admin() {
+        super();
+    }
+
+    @Override
+    public boolean login(String username, String password) {
+        return username.equals(getUsername()) && password.equals(getPassword());
+    }
+
+    @Override
+    public void logout() {
+        System.out.println("Admin logged out.");
+    }
+}
+
+package com.tubespbo.foodorder.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
+public class MenuItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int menuId;
+    private String name;
+    private String description;
+    private double price;
+    private String category;
+
+    public MenuItem() {
+    }
+
+    public MenuItem(int menuId, String name, String description, double price, String category) {
+        this.menuId = menuId;
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.category = category;
+    }
+
+    public int getMenuId() {
+        return menuId;
+    }
+
+    public void setMenuId(int menuId) {
+        this.menuId = menuId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+}
+
+package com.tubespbo.foodorder.model;
+
+import java.util.List;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "orders")
+public class Order {
+
+    public static final String DEFAULT_STATUS_PAYMENT = "PAID";
+    public static final String STATUS_CONFIRMED = "CONFIRMED";
+    public static final String STATUS_IN_QUEUE = "IN_QUEUE";
+    public static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    public static final String STATUS_DELIVERED = "DELIVERED";
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int orderId;
+
+    @ManyToOne
+    private Customer customer;
+
+    private int tableNumber;
+
+    @ManyToMany
+    private List<MenuItem> items;
+
+    private String paymentStatus = DEFAULT_STATUS_PAYMENT;
+    private int queueNumber;
+    private String status = STATUS_CONFIRMED;
+
+    public Order() {
+    }
+
+    public Order(int orderId, Customer customer, int tableNumber, List<MenuItem> items, int queueNumber) {
+        this.orderId = orderId;
+        this.customer = customer;
+        this.tableNumber = tableNumber;
+        this.items = items;
+        this.queueNumber = queueNumber;
+    }
+
+    public double calculateTotal() {
+        return items.stream().mapToDouble(MenuItem::getPrice).sum();
+    }
+
+    public int getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(int orderId) {
+        this.orderId = orderId;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+    }
+
+    public int getTableNumber() {
+        return tableNumber;
+    }
+
+    public void setTableNumber(int tableNumber) {
+        this.tableNumber = tableNumber;
+    }
+
+    public List<MenuItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<MenuItem> items) {
+        this.items = items;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public int getQueueNumber() {
+        return queueNumber;
+    }
+
+    public void setQueueNumber(int queueNumber) {
+        this.queueNumber = queueNumber;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+}
+
+#file application.properties:
+server.port=8080
+
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.username=user
+spring.datasource.password=ngokk
+
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=true
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+
+logging.level.org.springframework.security=DEBUG
+logging.level.org.springframework.web=DEBUG
+
+package com.tubespbo.foodorder.controller;
+
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.tubespbo.foodorder.model.Customer;
+import com.tubespbo.foodorder.model.User;
+import com.tubespbo.foodorder.repository.UserRepository;
+import com.tubespbo.foodorder.security.CustomUserDetails;
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("Not authenticated");
+        }
+
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        return ResponseEntity.ok(userDetails.getUser());
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerCustomer(@RequestBody Customer customer) {
+        Optional<User> existingUser = userRepository.findByUsername(customer.getUsername());
+        if (existingUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
+        }
+
+        customer.setPassword(passwordEncoder.encode(customer.getPassword()));
+        customer.setRole("CUSTOMER");
+        userRepository.save(customer);
+        return ResponseEntity.ok("Customer registered successfully");
+    }
+} 
+
+package com.tubespbo.foodorder.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import com.tubespbo.foodorder.model.Admin;
+import com.tubespbo.foodorder.repository.UserRepository;
+
+@Configuration
+public class InsertAdminRunner {
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @Bean
+    public CommandLineRunner createAdmin(UserRepository userRepository) {
+        return args -> {
+            if (userRepository.findByUsername("admin").isEmpty()) {
+                Admin admin = new Admin();
+                admin.setUsername("admin");
+                admin.setPassword(passwordEncoder.encode("ngokadmin"));
+                admin.setName("Administrator");
+                admin.setNoTelp("081234567890");
+                admin.setRole("ADMIN");
+
+                userRepository.save(admin);
+                System.out.println("Default admin user created.");
+            } else {
+                System.out.println("Admin user already exists.");
+            }
+        };
+    }
+} 
+
+package com.tubespbo.foodorder.security;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf().disable()
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/menu", "/menu/**", "/menu/search", "/menu/filter").permitAll()
+                .requestMatchers("/menu/**").hasRole("ADMIN")
+                .requestMatchers("/order/**").hasAnyRole("CUSTOMER", "ADMIN")
+                .anyRequest().authenticated()
+            )
+            .httpBasic();
+        return http.build();
+    }
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+package com.tubespbo.foodorder.security;
+
+import java.util.Collection;
+import java.util.Collections;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import com.tubespbo.foodorder.model.User;
+
+public class CustomUserDetails implements UserDetails {
+
+    private final User user;
+
+    public CustomUserDetails(User user) {
+        this.user = user;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.singletonList(
+                new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase())
+        );
+    }
+
+    @Override
+    public String getPassword() {
+        return user.getPassword();
+    }
+
+    @Override
+    public String getUsername() {
+        return user.getUsername();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    public User getUser() {
+        return user;
+    }
+}
+
+package com.tubespbo.foodorder.security;
+
+import com.tubespbo.foodorder.model.User;
+import com.tubespbo.foodorder.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.findByUsername(username)
+                .map(CustomUserDetails::new)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+    }
+}  
+
+package com.tubespbo.foodorder.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.tubespbo.foodorder.model.User;
+
+public interface UserRepository extends JpaRepository<User, Integer> {
+    Optional<User> findByUsername(String username);
+}
+
+package com.tubespbo.foodorder;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class FoodorderApplicationTests {
+
+    @Test
+    void contextLoads() {
+        // Ini hanya memastikan konteks Spring Boot bisa load tanpa error
+    }
+}
+
+#File application-test.properties:
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.username=user
+spring.datasource.password=ngokk
+spring.jpa.hibernate.ddl-auto=create-drop
+
+
+package com.tubespbo.foodorder.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.tubespbo.foodorder.model.MenuItem;
+
+public interface MenuService {
+    void addMenuItem(MenuItem item);
+    void updateMenuItem(MenuItem item);
+    void deleteMenuItem(int id);
+    List<MenuItem> getAllMenuItems();
+    List<MenuItem> filterMenuByCategory(String category);
+    List<MenuItem> searchMenuItemByName(String name);
+    Optional<MenuItem> getMenuItemById(int id);
+    boolean existsById(int id);
+}
+
+package com.tubespbo.foodorder.service.implement;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.tubespbo.foodorder.model.MenuItem;
+import com.tubespbo.foodorder.repository.MenuItemRepository;
+import com.tubespbo.foodorder.service.MenuService;
+
+@Service
+public class MenuManager implements MenuService {
+
+    @Autowired
+    private MenuItemRepository menuItemRepository;
+
+    @Override
+    public void addMenuItem(MenuItem item) {
+        menuItemRepository.save(item);
+    }
+
+    @Override
+    public void updateMenuItem(MenuItem item) {
+        menuItemRepository.save(item);
+    }
+
+    @Override
+    public void deleteMenuItem(int id) {
+        menuItemRepository.deleteById(id);
+    }
+
+    @Override
+    public List<MenuItem> getAllMenuItems() {
+        return menuItemRepository.findAll();
+    }
+
+    @Override
+    public List<MenuItem> filterMenuByCategory(String category) {
+        return menuItemRepository.findByCategory(category);
+    }
+
+    @Override
+    public List<MenuItem> searchMenuItemByName(String name) {
+        return menuItemRepository.findByNameContainingIgnoreCase(name);
+    }
+
+    @Override
+    public Optional<MenuItem> getMenuItemById(int id) {
+        return menuItemRepository.findById(id);
+    }
+
+    @Override
+    public boolean existsById(int id) {
+        return menuItemRepository.existsById(id);
+    }
+}
+
+package com.tubespbo.foodorder.service;
+
+import java.util.List;
+
+import com.tubespbo.foodorder.model.Customer;
+import com.tubespbo.foodorder.model.MenuItem;
+import com.tubespbo.foodorder.model.Order;
+
+public interface OrderService {
+    Order createOrder(Customer customer, List<MenuItem> items, int tableNumber);
+    Order getOrderById(int id);
+    void updateOrderStatus(int id, String status);
+
+    // Tambahan method untuk melihat semua order
+    List<Order> getAllOrders();
+}
+
+package com.tubespbo.foodorder.service.implement;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.tubespbo.foodorder.model.Customer;
+import com.tubespbo.foodorder.model.MenuItem;
+import com.tubespbo.foodorder.model.Order;
+import com.tubespbo.foodorder.repository.OrderRepository;
+import com.tubespbo.foodorder.service.OrderService;
+
+@Service
+public class OrderManager implements OrderService {
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Override
+public Order createOrder(Customer customer, List<MenuItem> items, int tableNumber) {
+    Order newOrder = new Order();
+    newOrder.setCustomer(customer);
+    newOrder.setItems(items);
+    newOrder.setPaymentStatus(Order.DEFAULT_STATUS_PAYMENT);
+    newOrder.setStatus(Order.STATUS_CONFIRMED);
+    newOrder.setQueueNumber((int) (Math.random() * 1000)); // sementara
+    newOrder.setTableNumber(tableNumber);  // set langsung di sini
+    return orderRepository.save(newOrder);
+}
+
+    @Override
+    public Order getOrderById(int id) {
+        Optional<Order> result = orderRepository.findById(id);
+        return result.orElse(null);
+    }
+
+    @Override
+    public void updateOrderStatus(int id, String status) {
+        Order order = getOrderById(id);
+        if (order != null) {
+            order.setStatus(status);
+            orderRepository.save(order);
+        }
+    }
+
+    @Override
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+}
+
+package com.tubespbo.foodorder.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.tubespbo.foodorder.model.MenuItem;
+
+@Repository
+public interface MenuItemRepository extends JpaRepository<MenuItem, Integer> {
+    List<MenuItem> findByCategory(String category);
+    List<MenuItem> findByNameContainingIgnoreCase(String name);
+}
+
+package com.tubespbo.foodorder.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.tubespbo.foodorder.model.Order;
+
+@Repository
+public interface OrderRepository extends JpaRepository<Order, Integer> {
+}
+
+#file pom.xml:
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.4.5</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.tubespbo</groupId>
+    <artifactId>foodorder</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>foodorder</name>
+    <description>tubes PBO//pemesanan makanan</description>
+    <url/>
+    <licenses>
+        <license/>
+    </licenses>
+    <developers>
+        <developer/>
+    </developers>
+    <scm>
+        <connection/>
+        <developerConnection/>
+        <tag/>
+        <url/>
+    </scm>
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+package com.tubespbo.foodorder.controller;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.tubespbo.foodorder.model.MenuItem;
+import com.tubespbo.foodorder.service.MenuService;
+
+@RestController
+@RequestMapping("/menu")
+public class MenuController {
+
+    @Autowired
+    private MenuService menuService;
+
+    @GetMapping
+    public List<MenuItem> getAllMenuItems() {
+        return menuService.getAllMenuItems();
+    }
+
+    @GetMapping("/search")
+    public List<MenuItem> searchMenu(@RequestParam String name) {
+        return menuService.searchMenuItemByName(name);
+    }
+
+    @GetMapping("/filter")
+    public List<MenuItem> filterByCategory(@RequestParam String category) {
+        return menuService.filterMenuByCategory(category);
+    }
+
+    @PostMapping
+    public ResponseEntity<String> addMenuItem(@RequestBody MenuItem item) {
+        menuService.addMenuItem(item);
+        return ResponseEntity.ok("Menu item added successfully");
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateMenuItem(@PathVariable int id, @RequestBody MenuItem updatedItem) {
+        Optional<MenuItem> optionalItem = menuService.getMenuItemById(id);
+        if (optionalItem.isPresent()) {
+            MenuItem existingItem = optionalItem.get();
+            existingItem.setName(updatedItem.getName());
+            existingItem.setDescription(updatedItem.getDescription());
+            existingItem.setPrice(updatedItem.getPrice());
+            existingItem.setCategory(updatedItem.getCategory());
+            menuService.updateMenuItem(existingItem);
+            return ResponseEntity.ok("Menu item updated successfully");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteMenuItem(@PathVariable int id) {
+        if (menuService.existsById(id)) {
+            menuService.deleteMenuItem(id);
+            return ResponseEntity.ok("Menu item deleted successfully");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+package com.tubespbo.foodorder.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.tubespbo.foodorder.dto.OrderRequest;
+import com.tubespbo.foodorder.model.Customer;
+import com.tubespbo.foodorder.model.MenuItem;
+import com.tubespbo.foodorder.model.Order;
+import com.tubespbo.foodorder.repository.MenuItemRepository;
+import com.tubespbo.foodorder.security.CustomUserDetails;
+import com.tubespbo.foodorder.service.OrderService;
+
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+
+    @Autowired
+    private OrderService orderService;
+    
+    @Autowired
+    private MenuItemRepository menuItemRepository;
+    
+    @PostMapping
+    public ResponseEntity<?> createOrder(@RequestBody OrderRequest orderRequest,
+                                         Authentication authentication) {
+    
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+    
+        if (!userDetails.getUser().getRole().equalsIgnoreCase("CUSTOMER")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Only customers can create orders.");
+        }
+    
+        Customer customer = (Customer) userDetails.getUser();
+        List<Integer> itemIds = orderRequest.getItems();
+    
+        if (itemIds == null || itemIds.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("items list cannot be empty.");
+        }
+    
+        List<MenuItem> items = menuItemRepository.findAllById(itemIds);
+    
+        if (items.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("No menu items found for the provided IDs.");
+        }
+    
+        if (items.size() != itemIds.size()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Some menu items not found. Please verify the IDs.");
+        }
+    
+        Order order = orderService.createOrder(customer, items, orderRequest.getTableNumber());
+        order.setTableNumber(orderRequest.getTableNumber());
+    
+        return ResponseEntity.ok(order);
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getAllOrders(Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+    
+        if (!userDetails.getUser().getRole().equalsIgnoreCase("ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Only admins can access all orders.");
+        }
+    
+        List<Order> orders = orderService.getAllOrders();
+        return ResponseEntity.ok(orders);
+    }
+}
+
+package com.tubespbo.foodorder.dto;
+
+import java.util.List;
+
+public class OrderRequest {
+    private List<Integer> items;
+    private int tableNumber;
+
+    public List<Integer> getItems() {
+        return items;
+    }
+
+    public void setItems(List<Integer> items) {
+        this.items = items;
+    }
+
+    public int getTableNumber() {
+        return tableNumber;
+    }
+
+    public void setTableNumber(int tableNumber) {
+        this.tableNumber = tableNumber;
+    }
+} 
