@@ -1,6 +1,10 @@
 package com.tubespbo.foodorder.controller;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,6 +26,7 @@ import com.tubespbo.foodorder.repository.MenuItemRepository;
 import com.tubespbo.foodorder.security.CustomUserDetails;
 import com.tubespbo.foodorder.service.OrderService;
 
+
 @RestController
 @RequestMapping("/order")
 public class OrderController {
@@ -32,101 +37,146 @@ public class OrderController {
     @Autowired
     private MenuItemRepository menuItemRepository;
 
-    // Create new order
     @PostMapping
-    public ResponseEntity<?> createOrder(@RequestBody OrderRequest orderRequest,
-                                         Authentication authentication) {
+    public ResponseEntity<?> createOrder(@RequestBody OrderRequest orderRequest, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
         if (!userDetails.getUser().getRole().equalsIgnoreCase("CUSTOMER")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only customers can create orders.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only customers can create orders.");
         }
 
         Customer customer = (Customer) userDetails.getUser();
         List<Integer> itemIds = orderRequest.getItems();
 
         if (itemIds == null || itemIds.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Items list cannot be empty.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Items list cannot be empty.");
         }
 
-        List<MenuItem> items = menuItemRepository.findAllById(itemIds);
-
-        if (items.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("No menu items found for the provided IDs.");
+        Map<Integer, Integer> quantityMap = new HashMap<>();
+        for (Integer id : itemIds) {
+            quantityMap.put(id, quantityMap.getOrDefault(id, 0) + 1);
         }
 
-        if (items.size() != itemIds.size()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Some menu items not found. Please verify the IDs.");
+        List<MenuItem> menuItemsFromDb = menuItemRepository.findAllById(new ArrayList<>(quantityMap.keySet()));
+        
+        if (menuItemsFromDb.size() != quantityMap.size()) {
+            List<Integer> foundIds = menuItemsFromDb.stream().map(MenuItem::getMenuId).collect(Collectors.toList());
+            List<Integer> notFoundIds = new ArrayList<>(quantityMap.keySet());
+            notFoundIds.removeAll(foundIds);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Some menu items not found. Please verify the IDs: " + notFoundIds);
         }
 
-        Order order = orderService.createOrder(customer, items, orderRequest.getTableNumber());
-        return ResponseEntity.ok(order);
+        List<MenuItem> orderedItemsForEntity = new ArrayList<>();
+        for (MenuItem item : menuItemsFromDb) {
+            int qty = quantityMap.get(item.getMenuId());
+            for (int i = 0; i < qty; i++) {
+                orderedItemsForEntity.add(item);
+            }
+        }
+
+        Order order = orderService.createOrder(customer, orderedItemsForEntity, orderRequest.getTableNumber());
+        return ResponseEntity.ok(buildOrderResponse(order));
     }
 
-    // Get all orders - ADMIN only
     @GetMapping
     public ResponseEntity<?> getAllOrders(Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
         if (!userDetails.getUser().getRole().equalsIgnoreCase("ADMIN")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only admins can access all orders.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can access all orders.");
         }
 
         List<Order> orders = orderService.getAllOrders();
-        return ResponseEntity.ok(orders);
+        List<Map<String, Object>> response = orders.stream().map(this::buildOrderResponse).collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
-    // Update order status - ADMIN only
     @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateOrderStatus(@PathVariable int id,
-                                               @RequestBody String newStatus,
-                                               Authentication authentication) {
+    public ResponseEntity<?> updateOrderStatus(@PathVariable int id, @RequestBody String newStatus, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
         if (!userDetails.getUser().getRole().equalsIgnoreCase("ADMIN")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only admins can update order status.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can update order status.");
         }
 
         Order order = orderService.getOrderById(id);
         if (order == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Order not found.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Order not found.");
         }
+
+        String cleanedStatus = newStatus.replace("\"", "").toUpperCase();
 
         List<String> allowedStatuses = List.of(
-            Order.STATUS_CONFIRMED,
-            Order.STATUS_IN_QUEUE,
-            Order.STATUS_IN_PROGRESS,
-            Order.STATUS_DELIVERED
+                Order.STATUS_CONFIRMED,
+                Order.STATUS_IN_QUEUE,
+                Order.STATUS_IN_PROGRESS,
+                Order.STATUS_DELIVERED
         );
 
-        if (!allowedStatuses.contains(newStatus)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Invalid status. Allowed: " + allowedStatuses);
+        if (!allowedStatuses.contains(cleanedStatus)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid status: '" + cleanedStatus + "'. Allowed: " + allowedStatuses);
         }
 
-        orderService.updateOrderStatus(id, newStatus);
-        return ResponseEntity.ok("Order status updated to: " + newStatus);
+        orderService.updateOrderStatus(id, cleanedStatus);
+        return ResponseEntity.ok("Order status updated to: " + cleanedStatus);
     }
 
-    // Get my orders - CUSTOMER only
     @GetMapping("/my")
     public ResponseEntity<?> getMyOrders(Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-
-        if (!userDetails.getUser().getRole().equalsIgnoreCase("CUSTOMER")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only customers can view their orders.");
-        }
-
         Customer customer = (Customer) userDetails.getUser();
         List<Order> myOrders = orderService.getOrdersByCustomer(customer);
-        return ResponseEntity.ok(myOrders);
+        List<Map<String, Object>> response = myOrders.stream().map(this::buildOrderResponse).collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> buildOrderResponse(Order order) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("orderId", order.getOrderId());
+        
+        Map<String, Object> customerDetails = new HashMap<>();
+        customerDetails.put("id", order.getCustomer().getId());
+        customerDetails.put("name", order.getCustomer().getName());
+        customerDetails.put("username", order.getCustomer().getUsername());
+        response.put("customer", customerDetails);
+
+        response.put("tableNumber", order.getTableNumber());
+        response.put("status", order.getStatus());
+        response.put("paymentStatus", order.getPaymentStatus());
+        response.put("queueNumber", order.getQueueNumber());
+        response.put("totalPrice", order.getTotalPrice());
+
+        Map<Integer, Integer> quantityMap = new HashMap<>();
+        if (order.getItems() != null) {
+            for (MenuItem item : order.getItems()) {
+                quantityMap.put(item.getMenuId(), quantityMap.getOrDefault(item.getMenuId(), 0) + 1);
+            }
+        }
+        
+        Map<Integer, MenuItem> itemLookup = new HashMap<>();
+        if (order.getItems() != null) {
+            itemLookup = order.getItems().stream()
+                .collect(Collectors.toMap(MenuItem::getMenuId, item -> item, (existing, replacement) -> existing));
+        }
+
+        List<Map<String, Object>> itemDetails = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : quantityMap.entrySet()) {
+            MenuItem item = itemLookup.get(entry.getKey());
+            if (item != null) {
+                Map<String, Object> detail = new HashMap<>();
+                detail.put("menuId", item.getMenuId());
+                detail.put("name", item.getName());
+                detail.put("description", item.getDescription());
+                detail.put("category", item.getCategory());
+                detail.put("quantity", entry.getValue());
+                detail.put("price", item.getPrice() * entry.getValue()); // Subtotal untuk jenis item ini
+                detail.put("unitPrice", item.getPrice()); // Harga satuan per item
+                detail.put("imageUrl", item.getImageUrl());   // Untuk gambar
+                itemDetails.add(detail);
+            }
+        }
+
+        response.put("items", itemDetails);
+        return response;
     }
 }

@@ -11,9 +11,9 @@ import jakarta.persistence.OneToMany;
 @Entity
 public class Customer extends User {
 
-    @OneToMany
+    @OneToMany(mappedBy = "customer", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private List<MenuItem> cart = new ArrayList<>();
+    private List<KeranjangItem> keranjangItems = new ArrayList<>();
 
     public Customer() {
         super();
@@ -29,23 +29,23 @@ public class Customer extends User {
         System.out.println("Customer logged out.");
     }
 
-    public void addToCart(MenuItem item) {
-        cart.add(item);
+    public List<KeranjangItem> getKeranjangItems() {
+        return keranjangItems;
     }
 
-    public void removeFromCart(MenuItem item) {
-        cart.remove(item);
+    public void setKeranjangItems(List<KeranjangItem> keranjangItems) {
+        this.keranjangItems = keranjangItems;
     }
 
-    public void clearCart() {
-        cart.clear();
+    public void addToKeranjang(KeranjangItem item) {
+        keranjangItems.add(item);
     }
 
-    public List<MenuItem> getCart() {
-        return cart;
+    public void removeFromKeranjang(KeranjangItem item) {
+        keranjangItems.remove(item);
     }
 
-    public void setCart(List<MenuItem> cart) {
-        this.cart = cart;
+    public void clearKeranjang() {
+        keranjangItems.clear();
     }
-}
+} 

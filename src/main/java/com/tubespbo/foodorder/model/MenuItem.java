@@ -11,20 +11,25 @@ public class MenuItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int menuId;
+
     private String name;
     private String description;
     private double price;
     private String category;
 
+    // Tambahan field imageUrl
+    private String imageUrl;
+
     public MenuItem() {
     }
 
-    public MenuItem(int menuId, String name, String description, double price, String category) {
+    public MenuItem(int menuId, String name, String description, double price, String category, String imageUrl) {
         this.menuId = menuId;
         this.name = name;
         this.description = description;
         this.price = price;
         this.category = category;
+        this.imageUrl = imageUrl;
     }
 
     public int getMenuId() {
@@ -65,5 +70,14 @@ public class MenuItem {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    // Getter dan Setter untuk imageUrl
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

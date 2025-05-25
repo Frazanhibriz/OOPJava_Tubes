@@ -1,48 +1,55 @@
 package com.tubespbo.foodorder.controller;
 
-import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.tubespbo.foodorder.model.Customer;
 import com.tubespbo.foodorder.model.User;
+import com.tubespbo.foodorder.model.Customer;
 import com.tubespbo.foodorder.repository.UserRepository;
+import com.tubespbo.foodorder.security.JwtUtil;
 import com.tubespbo.foodorder.security.CustomUserDetails;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private BCryptPasswordEncoder passwordEncoder;
+    @Autowired private AuthenticationManager authenticationManager;
+    @Autowired private JwtUtil jwtUtil;
 
-    @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
+        String username = credentials.get("username");
+        String password = credentials.get("password");
 
-    @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body("Not authenticated");
-        }
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        return ResponseEntity.ok(userDetails.getUser());
+        String token = jwtUtil.generateToken(userDetails);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("token", token);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerCustomer(@RequestBody Customer customer) {
+    public ResponseEntity<?> register(@RequestBody Customer customer) {
         Optional<User> existingUser = userRepository.findByUsername(customer.getUsername());
         if (existingUser.isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already exists");
+            return ResponseEntity.status(409).body("Username already exists");
         }
 
         customer.setPassword(passwordEncoder.encode(customer.getPassword()));
@@ -50,4 +57,10 @@ public class AuthController {
         userRepository.save(customer);
         return ResponseEntity.ok("Customer registered successfully");
     }
-} 
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        return ResponseEntity.ok(userDetails.getUser());
+    }
+}
