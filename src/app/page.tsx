@@ -3,13 +3,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import Head from "next/head";
 
 export default function Home() {
 const [menuOpen, setMenuOpen] = useState(false);
+const [imageError, setImageError] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
 
 useEffect(() => {
 document.body.style.overflow = menuOpen ? "hidden" : "auto";
 }, [menuOpen]);
+
+const handleMenuToggle = () => {
+  setIsLoading(true);
+  setMenuOpen((prev) => !prev);
+  setTimeout(() => setIsLoading(false), 300); // Match animation duration
+};
 
 return (
 <div className="relative min-h-screen overflow-hidden">
@@ -20,17 +29,29 @@ animate={{ opacity: 1, scale: 1 }}
 transition={{ duration: 1 }}
 className="absolute inset-0"
 >
-<img src="/images/bg-home.jpg" alt="Background" className="w-full h-full object-cover filter blur-[2px]" />
+<img 
+  src={imageError ? "/images/fallback-bg.jpg" : "/images/bg-home.jpg"} 
+  alt="Background" 
+  className="w-full h-full object-cover filter blur-[2px]" 
+  onError={() => setImageError(true)}
+/>
 <div className="absolute inset-0 bg-black/40 z-10" />
 </motion.div>
   {/* Menu Toggle - Always visible */}
   <div className="absolute top-5 right-6 z-40">
     <button
-      onClick={() => setMenuOpen((prev) => !prev)}
-      className="text-white bg-white/20 p-2 rounded-full hover:bg-white/30 transition"
+      onClick={handleMenuToggle}
+      className="text-white bg-white/20 p-2 rounded-full hover:bg-white/30 transition disabled:opacity-50"
       aria-label="Toggle Menu"
+      disabled={isLoading}
     >
-      {menuOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
+      {isLoading ? (
+        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      ) : menuOpen ? (
+        <X className="w-6 h-6 text-white" aria-hidden="true" />
+      ) : (
+        <Menu className="w-6 h-6 text-white" aria-hidden="true" />
+      )}
     </button>
   </div>
 
@@ -75,16 +96,29 @@ className="absolute inset-0"
     transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
     className="relative z-20 flex flex-col items-center justify-center text-white text-center h-screen px-4"
   >
+    <Head>
+      <title>Lesehan Sederhana - Nikmati Sederhananya!</title>
+      <meta name="description" content="Lesehan Sederhana - Tempat makan dengan suasana nyaman dan menu lezat" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <link rel="icon" href="/favicon.ico" />
+    </Head>
+
     <h1 className="text-5xl md:text-7xl font-bold mb-4">
       Lesehan Sederhana
     </h1>
-    <p className="text-xl md:text-2xl mb-8">Nikmati Sederhananya!</p>
-    <Link
-      href="/menu/allmenu"
-      className="bg-[#D4B895] text-black px-8 py-3 rounded-full text-lg font-semibold hover:bg-[#C4A885] transition-colors inline-block"
-    >
-      Lihat Menu
-    </Link>
+    <p className="text-xl md:text-2xl mb-8 max-w-2xl">
+      NIKMATI SEDERHANANYA!
+    </p>
+    <div className="flex flex-col sm:flex-row gap-4">
+      <Link
+        href="/menu/allmenu"
+        className="bg-[#D4B895] text-black px-8 py-3 rounded-full text-lg font-semibold hover:bg-[#C4A885] transition-colors inline-block"
+        role="button"
+        aria-label="Lihat Menu Kami"
+      >
+        Lihat Menu
+      </Link>
+    </div>
   </motion.div>
 </div>
 );
