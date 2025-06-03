@@ -17,13 +17,13 @@ public class MenuManager implements MenuService {
     private MenuItemRepository menuItemRepository;
 
     @Override
-    public void addMenuItem(MenuItem item) {
-        menuItemRepository.save(item);
+    public MenuItem addMenuItem(MenuItem item) {
+        return menuItemRepository.save(item);
     }
 
     @Override
-    public void updateMenuItem(MenuItem item) {
-        menuItemRepository.save(item);
+    public MenuItem updateMenuItem(MenuItem item) {
+        return menuItemRepository.save(item);
     }
 
     @Override

@@ -2,11 +2,22 @@ package com.tubespbo.foodorder.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths; // Untuk path yang lebih robust
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger; // Logging
+import org.slf4j.LoggerFactory; // Logging
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value; // Untuk path upload dari properties
+import org.springframework.core.io.Resource; // Untuk melayani file (jika diperlukan nanti)
+import org.springframework.core.io.UrlResource; // Untuk melayani file
+import org.springframework.http.HttpHeaders; // Untuk melayani file
+import org.springframework.http.HttpStatus; // Untuk status code yang lebih eksplisit
+import org.springframework.http.MediaType; // Untuk tipe media
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,16 +32,29 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.tubespbo.foodorder.model.MenuItem;
+import com.tubespbo.foodorder.repository.MenuItemRepository;
 import com.tubespbo.foodorder.service.MenuService;
 
 @RestController
 @RequestMapping("/menu")
 public class MenuController {
 
+    private static final Logger logger = LoggerFactory.getLogger(MenuController.class);
+
     @Autowired
     private MenuService menuService;
 
-// Public - Semua pengguna bisa akses
+    @Autowired
+    private MenuItemRepository menuItemRepository;
+
+    // Anda bisa mendefinisikan path ini di application.properties
+    // contoh: app.upload.dir=${user.home}/foodorder_uploads
+    @Value("${app.upload.dir:${user.dir}/uploads}") // Default ke user.dir/uploads jika tidak ada di properties
+    private String baseUploadPath;
+
+    private final String MENU_IMAGE_SUBDIR = "menu";
+
+
     @GetMapping
     public List<MenuItem> getAllMenuItems() {
         return menuService.getAllMenuItems();
@@ -46,73 +70,101 @@ public class MenuController {
         return menuService.filterMenuByCategory(category);
     }
 
-// ADMIN only
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> addMenuItem(@RequestBody MenuItem item) {
-        menuService.addMenuItem(item);
-        return ResponseEntity.ok("Menu item added successfully");
+    public ResponseEntity<MenuItem> addMenuItem(@RequestBody MenuItem item) {
+        MenuItem newItem = menuService.addMenuItem(item);
+        return ResponseEntity.status(HttpStatus.CREATED).body(newItem);
     }
 
-// ADMIN only
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateMenuItem(@PathVariable int id, @RequestBody MenuItem updatedItem) {
+    public ResponseEntity<MenuItem> updateMenuItem(@PathVariable int id, @RequestBody MenuItem updatedItemDetails) {
         Optional<MenuItem> optionalItem = menuService.getMenuItemById(id);
         if (optionalItem.isPresent()) {
             MenuItem existingItem = optionalItem.get();
-            existingItem.setName(updatedItem.getName());
-            existingItem.setDescription(updatedItem.getDescription());
-            existingItem.setPrice(updatedItem.getPrice());
-            existingItem.setCategory(updatedItem.getCategory());
-            existingItem.setImageUrl(updatedItem.getImageUrl());
-            menuService.updateMenuItem(existingItem);
-            return ResponseEntity.ok("Menu item updated successfully");
+            existingItem.setName(updatedItemDetails.getName());
+            existingItem.setDescription(updatedItemDetails.getDescription());
+            existingItem.setPrice(updatedItemDetails.getPrice());
+            existingItem.setCategory(updatedItemDetails.getCategory());
+            // imageUrl biasanya diupdate melalui endpoint upload-image terpisah
+            // Namun, jika frontend mengirimkannya, kita bisa update juga.
+            if (updatedItemDetails.getImageUrl() != null) {
+                 existingItem.setImageUrl(updatedItemDetails.getImageUrl());
+            }
+            // Anda mungkin ingin menambahkan validasi untuk status di sini jika masih relevan
+            // existingItem.setStatus(updatedItemDetails.getStatus()); 
+            MenuItem savedItem = menuService.updateMenuItem(existingItem);
+            return ResponseEntity.ok(savedItem);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
 
-// ADMIN only
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deleteMenuItem(@PathVariable int id) {
+    public ResponseEntity<Map<String, String>> deleteMenuItem(@PathVariable int id) {
         if (menuService.existsById(id)) {
             menuService.deleteMenuItem(id);
-            return ResponseEntity.ok("Menu item deleted successfully");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Menu item deleted successfully");
+            return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
 
-// ADMIN only - Upload gambar
     @PostMapping("/upload-image/{menuId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> uploadImage(@PathVariable int menuId, @RequestParam("image") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadImage(@PathVariable int menuId, @RequestParam("image") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File gambar tidak boleh kosong"));
+        }
         try {
-            Optional<MenuItem> optional = menuService.getMenuItemById(menuId);
-            if (optional.isEmpty()) {
+            Optional<MenuItem> optionalItem = menuService.getMenuItemById(menuId);
+            if (optionalItem.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            MenuItem item = optional.get();
+            MenuItem item = optionalItem.get();
 
-// Path absolut: simpan di direktori uploads/menu di dalam project
-            String uploadDir = System.getProperty("user.dir") + "/uploads/menu/";
-            File directory = new File(uploadDir);
-            if (!directory.exists()) {
-                directory.mkdirs(); // Buat folder jika belum ada
+            File uploadDirFile = new File(baseUploadPath, MENU_IMAGE_SUBDIR);
+            if (!uploadDirFile.exists()) {
+                if (!uploadDirFile.mkdirs()) {
+                    logger.error("Gagal membuat direktori upload: " + uploadDirFile.getAbsolutePath());
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Gagal membuat direktori upload."));
+                }
             }
 
-            String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            File dest = new File(directory, filename);
-            file.transferTo(dest);
+            String originalFileName = file.getOriginalFilename();
+            String fileExtension = "";
+            if (originalFileName != null && originalFileName.contains(".")) {
+                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            }
+            String filename = UUID.randomUUID().toString() + fileExtension;
+            
+            File destinationFile = new File(uploadDirFile.getAbsolutePath(), filename);
+            file.transferTo(destinationFile);
 
-            item.setImageUrl("/uploads/menu/" + filename);
+            String relativeImageUrl = "/" + "uploads" + "/" + MENU_IMAGE_SUBDIR + "/" + filename;
+            item.setImageUrl(relativeImageUrl);
             menuService.updateMenuItem(item);
 
-            return ResponseEntity.ok("Image uploaded successfully");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Image uploaded successfully");
+            response.put("imageUrl", relativeImageUrl);
+            return ResponseEntity.ok(response);
         } catch (IOException e) {
-            return ResponseEntity.status(500).body("Failed to upload image: " + e.getMessage());
+            logger.error("Gagal mengupload gambar untuk menuId {}: {}", menuId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Gagal mengupload gambar: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/count")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Long>> getMenuCount() {
+        long count = menuItemRepository.count();
+        Map<String, Long> response = new HashMap<>();
+        response.put("count", count);
+        return ResponseEntity.ok(response);
     }
 }

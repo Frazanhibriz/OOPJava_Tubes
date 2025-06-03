@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // Ditambahkan
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import com.tubespbo.foodorder.model.Customer;
 import com.tubespbo.foodorder.model.MenuItem;
 import com.tubespbo.foodorder.model.Order;
 import com.tubespbo.foodorder.repository.MenuItemRepository;
+import com.tubespbo.foodorder.repository.OrderRepository; // Ditambahkan untuk count
 import com.tubespbo.foodorder.security.CustomUserDetails;
 import com.tubespbo.foodorder.service.OrderService;
 
@@ -36,6 +38,9 @@ public class OrderController {
 
     @Autowired
     private MenuItemRepository menuItemRepository;
+
+    @Autowired // Ditambahkan untuk akses langsung ke repository untuk count
+    private OrderRepository orderRepository;
 
     @PostMapping
     public ResponseEntity<?> createOrder(@RequestBody OrderRequest orderRequest, Authentication authentication) {
@@ -79,26 +84,16 @@ public class OrderController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')") // Pastikan getAllOrders hanya untuk Admin
     public ResponseEntity<?> getAllOrders(Authentication authentication) {
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-
-        if (!userDetails.getUser().getRole().equalsIgnoreCase("ADMIN")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can access all orders.");
-        }
-
         List<Order> orders = orderService.getAllOrders();
         List<Map<String, Object>> response = orders.stream().map(this::buildOrderResponse).collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')") // Pastikan update status hanya untuk Admin
     public ResponseEntity<?> updateOrderStatus(@PathVariable int id, @RequestBody String newStatus, Authentication authentication) {
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-
-        if (!userDetails.getUser().getRole().equalsIgnoreCase("ADMIN")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can update order status.");
-        }
-
         Order order = orderService.getOrderById(id);
         if (order == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Order not found.");
@@ -169,14 +164,23 @@ public class OrderController {
                 detail.put("description", item.getDescription());
                 detail.put("category", item.getCategory());
                 detail.put("quantity", entry.getValue());
-                detail.put("price", item.getPrice() * entry.getValue()); // Subtotal untuk jenis item ini
-                detail.put("unitPrice", item.getPrice()); // Harga satuan per item
-                detail.put("imageUrl", item.getImageUrl());   // Untuk gambar
+                detail.put("price", item.getPrice() * entry.getValue());
+                detail.put("unitPrice", item.getPrice()); 
+                detail.put("imageUrl", item.getImageUrl());
                 itemDetails.add(detail);
             }
         }
 
         response.put("items", itemDetails);
         return response;
+    }
+
+    @GetMapping("/count")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Long>> getOrderCount() {
+        long count = orderRepository.count();
+        Map<String, Long> response = new HashMap<>();
+        response.put("count", count);
+        return ResponseEntity.ok(response);
     }
 }

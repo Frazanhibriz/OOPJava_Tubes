@@ -6,8 +6,8 @@ import java.util.Optional;
 import com.tubespbo.foodorder.model.MenuItem;
 
 public interface MenuService {
-    void addMenuItem(MenuItem item);
-    void updateMenuItem(MenuItem item);
+    MenuItem addMenuItem(MenuItem item);
+    MenuItem updateMenuItem(MenuItem item);
     void deleteMenuItem(int id);
     List<MenuItem> getAllMenuItems();
     List<MenuItem> filterMenuByCategory(String category);
