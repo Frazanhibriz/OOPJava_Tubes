@@ -1,7 +1,9 @@
+// src/app/admin/login/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import axios from "axios"; 
 import axiosInstance from "@/utils/axiosInstance";
 import { isLoggedIn, logout as authLogout } from "@/utils/authUtils";
 import { motion } from "framer-motion";
@@ -16,8 +18,8 @@ interface UserDetails {
 }
 
 export default function AdminLoginPage() {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState(""); // Kosongkan nilai awal, biarkan admin input
+  const [password, setPassword] = useState(""); // Kosongkan nilai awal
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -27,14 +29,19 @@ export default function AdminLoginPage() {
     if (isLoggedIn()) {
         const verifyRoleAndRedirect = async () => {
             try {
+                console.log("AdminLoginPage: useEffect - User is logged in, verifying role...");
                 const response = await axiosInstance.get<UserDetails>("/auth/me");
-                if (response.data && response.data.role.toUpperCase() === "ADMIN") {
+                console.log("AdminLoginPage: useEffect - /auth/me response:", response.data);
+                if (response.data && response.data.role && response.data.role.toUpperCase() === "ADMIN") {
+                    console.log("AdminLoginPage: useEffect - Role ADMIN confirmed, redirecting to dashboard.");
                     router.replace(searchParams.get("redirect_to") || "/admin/dashboard"); 
                 } else {
+                    console.log("AdminLoginPage: useEffect - Logged in user is not ADMIN or role missing, logging out.");
                     authLogout(); 
+                    // Tidak perlu redirect lagi di sini, biarkan di halaman login admin
                 }
-            } catch (e) {
-                console.error("Gagal verifikasi peran user yang sudah login:", e);
+            } catch (e: any) {
+                console.error("AdminLoginPage: useEffect - Gagal verifikasi peran:", e.isAxiosError ? e.response?.data || e.message : e);
                 authLogout(); 
             }
         };
@@ -48,20 +55,49 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      // Frontend validation first
-      if (username === "admin" && password === "admin123") {
-        // Simulate successful login
-        localStorage.setItem("token", "admin-token");
-        localStorage.setItem("userRole", "ADMIN");
+      console.log("AdminLoginPage: handleSubmit - Attempting login for username:", username);
+      const loginResponse = await axios.post("http://localhost:8080/auth/login", {
+        username,
+        password,
+      });
+      console.log("AdminLoginPage: handleSubmit - Response from /auth/login:", loginResponse.data);
+
+      if (loginResponse.data && loginResponse.data.token) {
+        const tempToken = loginResponse.data.token;
+        localStorage.setItem("token", tempToken);
+        console.log("AdminLoginPage: handleSubmit - Token saved to localStorage:", tempToken);
         
-        // Redirect to dashboard
-        router.push("/admin/dashboard");
+        // Penting: Setelah token disimpan, axiosInstance akan menggunakannya untuk request berikutnya
+        console.log("AdminLoginPage: handleSubmit - Fetching user details from /auth/me to verify role...");
+        const userDetailsResponse = await axiosInstance.get<UserDetails>("/auth/me");
+        console.log("AdminLoginPage: handleSubmit - Response from /auth/me:", userDetailsResponse.data);
+        
+        if (userDetailsResponse.data && userDetailsResponse.data.role && userDetailsResponse.data.role.toUpperCase() === "ADMIN") {
+          console.log("AdminLoginPage: handleSubmit - ADMIN role confirmed. Redirecting...");
+          const redirectTo = searchParams.get("redirect_to");
+          router.replace(redirectTo || "/admin/dashboard"); 
+        } else {
+          localStorage.removeItem("token"); 
+          const roleReceived = userDetailsResponse.data?.role || "tidak diketahui";
+          setError(`Akses ditolak. Akun bukan Admin atau peran tidak sesuai (Peran diterima: ${roleReceived}).`);
+          console.warn(`AdminLoginPage: handleSubmit - Access denied. Role received: ${roleReceived}`);
+        }
       } else {
-        setError("Username atau password salah. Gunakan username: admin dan password: admin123");
+        setError("Login gagal. Token tidak diterima dari server.");
+        console.warn("AdminLoginPage: handleSubmit - Login failed, no token from server.");
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Terjadi kesalahan saat login.");
+    } catch (err: any) {
+      console.error("AdminLoginPage: handleSubmit - Login error:", err.isAxiosError ? err.response?.data || err.message : err);
+      localStorage.removeItem("token"); 
+      if (axios.isAxiosError(err) && err.response) {
+         if (err.response.status === 401 || err.response.status === 403) { // 401 biasanya untuk bad credentials dari /auth/login
+            setError("Username atau password salah.");
+         } else {
+            setError(err.response.data?.message || err.response.data || "Terjadi kesalahan jaringan atau server.");
+         }
+      } else {
+        setError("Terjadi kesalahan teknis saat login.");
+      }
     } finally {
       setIsLoading(false);
     }

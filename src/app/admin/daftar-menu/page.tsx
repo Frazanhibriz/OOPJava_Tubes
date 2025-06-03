@@ -9,18 +9,17 @@ interface AdminMenuItem {
   id?: number;
   imageUrl?: string | File;
   name: string;
-  price: string; // Disimpan sebagai string untuk input form
+  price: string; 
   status: 'Available' | 'Out Of Stock';
   category: string;
   description?: string;
 }
 
-// Tipe data yang diharapkan dari backend untuk satu item menu
 interface BackendMenuItem {
-  id: number; // id pasti ada dari backend
+  id: number; 
   name: string;
-  price: number; // Backend mengirim price sebagai number
-  status: 'Available' | 'Out Of Stock'; // Asumsi backend mengirim ini
+  price: number; 
+  status: 'Available' | 'Out Of Stock'; 
   category: string;
   description?: string;
   imageUrl?: string;
@@ -48,15 +47,14 @@ export default function DaftarMenuPage() {
   const fetchMenuItems = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Pastikan backend mengirim semua field yang dibutuhkan oleh AdminMenuItem
       const response = await axiosInstance.get<BackendMenuItem[]>('/menu'); 
       const formattedItems: AdminMenuItem[] = response.data.map(item => ({
           id: item.id,
           name: item.name,
-          price: String(item.price), // Konversi price number dari backend ke string untuk form
+          price: String(item.price), 
           status: item.status,
           category: item.category,
-          description: item.description || item.name, // Default deskripsi ke nama jika tidak ada
+          description: item.description || item.name, 
           imageUrl: item.imageUrl || undefined 
       }));
       setMenuItems(formattedItems);
@@ -184,9 +182,6 @@ export default function DaftarMenuPage() {
       if (typeof item.imageUrl === 'string') {
         finalImageUrl = item.imageUrl;
       } else if (item.imageUrl instanceof File && item.id) {
-        // Jika File dan item sudah ada ID, upload dulu (seharusnya sudah ditangani handleImageFileChange)
-        // Jika ini terjadi, berarti user memilih file baru tapi belum diupload terpisah
-        // Atau, lebih baik, pastikan handleImageFileChange selalu update imageUrl menjadi string
         console.warn(`Item "${item.name}" (ID: ${item.id}) memiliki File object. Idealnya sudah diupload.`);
         const originalItem = allFetchedMenuItems.find(fi => fi.id === item.id);
         finalImageUrl = (originalItem && typeof originalItem.imageUrl === 'string') ? originalItem.imageUrl : undefined;
@@ -214,10 +209,8 @@ export default function DaftarMenuPage() {
       if (item.id) {
         return axiosInstance.put(`/menu/${item.id}`, payloadForBackend);
       } else {
-        // Untuk item baru, setelah POST berhasil, idealnya kita dapat ID dan bisa upload gambar jika ada File object
         const createResponse = await axiosInstance.post<BackendMenuItem>('/menu', payloadForBackend);
         const newItemId = createResponse.data.id;
-        // Jika ada file yang disimpan di state untuk item baru ini, upload sekarang
         if (item.imageUrl instanceof File && newItemId) {
             console.log(`Uploading image for new item ID: ${newItemId}`);
             const formData = new FormData();
@@ -228,11 +221,10 @@ export default function DaftarMenuPage() {
                 });
             } catch (uploadError) {
                 console.error(`Gagal upload gambar untuk item baru ID ${newItemId}:`, uploadError);
-                // Item tetap dibuat, tapi gambar gagal upload
                 alert(`Item ${payloadForBackend.name} berhasil dibuat, tapi gambar gagal diupload.`);
             }
         }
-        return createResponse; // Kembalikan respons dari create
+        return createResponse; 
       }
     });
 
