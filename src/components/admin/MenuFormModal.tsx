@@ -11,7 +11,7 @@ export interface AdminMenuItemFormData {
   price: string;
   category: string;
   description: string;
-  imageUrl?: string | File | null; 
+  imageUrl?: string | File | null;
 }
 
 interface MenuFormModalProps {
@@ -44,17 +44,22 @@ const MenuFormModal: React.FC<MenuFormModalProps> = ({
   const [currentImageFile, setCurrentImageFile] = useState<File | undefined>(undefined);
 
   useEffect(() => {
-    if (initialData) {
-      setFormData({ ...initialData, price: String(initialData.price) });
+    if (isOpen && initialData) {
+      setFormData({
+        id: initialData.id,
+        name: initialData.name || '',
+        price: String(initialData.price || ''),
+        category: initialData.category || CATEGORIES[0],
+        description: initialData.description || '',
+        imageUrl: initialData.imageUrl || null,
+      });
       if (typeof initialData.imageUrl === 'string' && initialData.imageUrl) {
-        setImagePreview(initialData.imageUrl.startsWith('http') || initialData.imageUrl.startsWith('/') 
-            ? initialData.imageUrl.startsWith('/') ? `http://localhost:8080${initialData.imageUrl}` : initialData.imageUrl
-            : `http://localhost:8080/${initialData.imageUrl}`);
+        setImagePreview(initialData.imageUrl.startsWith('/') ? `http://localhost:8080${initialData.imageUrl}` : initialData.imageUrl);
       } else {
         setImagePreview(null);
       }
       setCurrentImageFile(undefined);
-    } else {
+    } else if (isOpen && !initialData) {
       setFormData({
         name: '', price: '', category: CATEGORIES[0], description: '', imageUrl: null,
       });

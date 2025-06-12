@@ -14,7 +14,7 @@ import {
     ExclamationTriangleIcon,
     PencilSquareIcon
 } from '@heroicons/react/24/outline';
-import MenuFormModal, { AdminMenuItemFormData } from '@/components/admin/MenuFormModal'; // Import modal
+import MenuFormModal, { AdminMenuItemFormData } from '@/components/admin/MenuFormModal';
 
 interface AdminMenuItemOnPage {
   id: number; 
@@ -22,7 +22,7 @@ interface AdminMenuItemOnPage {
   name: string;
   price: string;
   category: string;
-  description?: string;
+  description?: string; // Tetap opsional di sini
 }
 
 interface BackendMenuItem {
@@ -32,7 +32,7 @@ interface BackendMenuItem {
   category: string;
   description?: string;
   imageUrl?: string;
-  status?: 'Available' | 'Out Of Stock'; // Status mungkin masih ada dari backend
+  status?: 'Available' | 'Out Of Stock';
 }
 
 interface MenuItemPayloadToServer {
@@ -122,9 +122,13 @@ export default function DaftarMenuPage() {
   };
 
   const handleOpenEditModal = (item: AdminMenuItemOnPage) => {
+    // ---- PERBAIKAN DI SINI ----
     const editItemFormData: AdminMenuItemFormData = {
-        id: item.id, name: item.name, price: item.price,
-        category: item.category, description: item.description || '',
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        category: item.category,
+        description: item.description || '', // Pastikan selalu ada string, meskipun kosong
         imageUrl: item.imageUrl || null,
     };
     setEditingItem(editItemFormData);
@@ -161,8 +165,6 @@ export default function DaftarMenuPage() {
     };
 
     try {
-        let newOrUpdatedItem: BackendMenuItem;
-
         if (isEditMode && formData.id) {
             if (imageFile) {
                 const imageUploadFormData = new FormData();
@@ -175,13 +177,11 @@ export default function DaftarMenuPage() {
                 payload.imageUrl = null; 
             }
             
-            const updateResponse = await axiosInstance.put<BackendMenuItem>(`/menu/${formData.id}`, payload);
-            newOrUpdatedItem = updateResponse.data;
+            await axiosInstance.put(`/menu/${formData.id}`, payload);
             alert("Menu berhasil diperbarui!");
         } else {
             const createResponse = await axiosInstance.post<BackendMenuItem>('/menu', payload);
-            newOrUpdatedItem = createResponse.data;
-            const newItemId = newOrUpdatedItem.menuId; 
+            const newItemId = createResponse.data.menuId; 
             alert(`Menu "${payload.name}" berhasil ditambahkan!`);
 
             if (imageFile && newItemId) {
@@ -229,6 +229,7 @@ export default function DaftarMenuPage() {
     if (isDropdownActive) { window.addEventListener('click', handleClickOutside); }
     return () => { window.removeEventListener('click', handleClickOutside); };
   }, [isDropdownActive]);
+
 
   if (isLoading && menuItems.length === 0 && !error) {
     return (
@@ -315,16 +316,21 @@ export default function DaftarMenuPage() {
                                     <tr><td colSpan={5} className="py-10 text-center text-gray-500">Tidak ada menu yang ditemukan.</td></tr>
                                 ) : (
                                     filteredMenuItems.map((item) => {
-                                        let imageDisplaySrc: string | undefined = "/images/placeholder-food.png"; 
+                                        const PLACEHOLDER_IMAGE_URL = "/images/placeholder-food.png";
+                                        let imageDisplaySrc = PLACEHOLDER_IMAGE_URL; 
                                         if (item.imageUrl && typeof item.imageUrl === 'string') {
-                                            imageDisplaySrc = item.imageUrl.startsWith('http') || item.imageUrl.startsWith('/') 
-                                                                ? item.imageUrl.startsWith('/') ? `http://localhost:8080${item.imageUrl}` : item.imageUrl
-                                                                : `http://localhost:8080/${item.imageUrl}`;
+                                            if (item.imageUrl.startsWith('http')) {
+                                                imageDisplaySrc = item.imageUrl;
+                                            } else if (item.imageUrl.startsWith('/')) {
+                                                imageDisplaySrc = `http://localhost:8080${item.imageUrl}`;
+                                            } else { 
+                                                imageDisplaySrc = `http://localhost:8080/${item.imageUrl}`;
+                                            }
                                         }
                                         return (
                                             <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-4 py-2 whitespace-nowrap">
-                                                    <Image src={imageDisplaySrc} alt={item.name} width={48} height={48} className="w-12 h-12 rounded object-cover bg-gray-200" onError={(e) => { const target = e.target as HTMLImageElement; target.src = '/images/placeholder-food.png'; target.srcset = ""; }} />
+                                                    <Image src={imageDisplaySrc} alt={item.name} width={48} height={48} className="w-12 h-12 rounded object-cover bg-gray-200" onError={(e) => { const target = e.target as HTMLImageElement; if (target.src !== PLACEHOLDER_IMAGE_URL) { target.src = PLACEHOLDER_IMAGE_URL; target.srcset = ""; } }} />
                                                 </td>
                                                 <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
                                                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
