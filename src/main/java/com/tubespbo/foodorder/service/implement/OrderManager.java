@@ -1,11 +1,11 @@
 package com.tubespbo.foodorder.service.implement;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.tubespbo.foodorder.exception.ResourceNotFoundException; // Import exception
 import com.tubespbo.foodorder.model.Customer;
 import com.tubespbo.foodorder.model.MenuItem;
 import com.tubespbo.foodorder.model.Order;
@@ -38,17 +38,15 @@ public class OrderManager implements OrderService {
 
     @Override
     public Order getOrderById(int id) {
-        Optional<Order> result = orderRepository.findById(id);
-        return result.orElse(null);
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
     }
 
     @Override
     public void updateOrderStatus(int id, String status) {
         Order order = getOrderById(id);
-        if (order != null) {
-            order.setStatus(status);
-            orderRepository.save(order);
-        }
+        order.setStatus(status);
+        orderRepository.save(order);
     }
 
     @Override

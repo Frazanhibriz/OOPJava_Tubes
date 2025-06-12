@@ -1,23 +1,19 @@
 package com.tubespbo.foodorder.controller;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths; // Untuk path yang lebih robust
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
-import org.slf4j.Logger; // Logging
-import org.slf4j.LoggerFactory; // Logging
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value; // Untuk path upload dari properties
-import org.springframework.core.io.Resource; // Untuk melayani file (jika diperlukan nanti)
-import org.springframework.core.io.UrlResource; // Untuk melayani file
-import org.springframework.http.HttpHeaders; // Untuk melayani file
-import org.springframework.http.HttpStatus; // Untuk status code yang lebih eksplisit
-import org.springframework.http.MediaType; // Untuk tipe media
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -47,13 +43,11 @@ public class MenuController {
     @Autowired
     private MenuItemRepository menuItemRepository;
 
-    // Anda bisa mendefinisikan path ini di application.properties
-    // contoh: app.upload.dir=${user.home}/foodorder_uploads
-    @Value("${app.upload.dir:${user.dir}/uploads}") // Default ke user.dir/uploads jika tidak ada di properties
-    private String baseUploadPath;
+    @Value("${app.upload.base-path:${user.dir}}")
+    private String appUploadBasePath;
 
+    private final String UPLOADS_DIR_NAME = "uploads";
     private final String MENU_IMAGE_SUBDIR = "menu";
-
 
     @GetMapping
     public List<MenuItem> getAllMenuItems() {
@@ -80,25 +74,17 @@ public class MenuController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MenuItem> updateMenuItem(@PathVariable int id, @RequestBody MenuItem updatedItemDetails) {
-        Optional<MenuItem> optionalItem = menuService.getMenuItemById(id);
-        if (optionalItem.isPresent()) {
-            MenuItem existingItem = optionalItem.get();
+        return menuService.getMenuItemById(id).map(existingItem -> {
             existingItem.setName(updatedItemDetails.getName());
             existingItem.setDescription(updatedItemDetails.getDescription());
             existingItem.setPrice(updatedItemDetails.getPrice());
             existingItem.setCategory(updatedItemDetails.getCategory());
-            // imageUrl biasanya diupdate melalui endpoint upload-image terpisah
-            // Namun, jika frontend mengirimkannya, kita bisa update juga.
-            if (updatedItemDetails.getImageUrl() != null) {
-                 existingItem.setImageUrl(updatedItemDetails.getImageUrl());
+            if (updatedItemDetails.getImageUrl() != null || "null".equalsIgnoreCase(String.valueOf(updatedItemDetails.getImageUrl()))) {
+                existingItem.setImageUrl(updatedItemDetails.getImageUrl());
             }
-            // Anda mungkin ingin menambahkan validasi untuk status di sini jika masih relevan
-            // existingItem.setStatus(updatedItemDetails.getStatus()); 
             MenuItem savedItem = menuService.updateMenuItem(existingItem);
             return ResponseEntity.ok(savedItem);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
@@ -106,9 +92,7 @@ public class MenuController {
     public ResponseEntity<Map<String, String>> deleteMenuItem(@PathVariable int id) {
         if (menuService.existsById(id)) {
             menuService.deleteMenuItem(id);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Menu item deleted successfully");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("message", "Menu item with ID " + id + " deleted successfully."));
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -121,18 +105,14 @@ public class MenuController {
             return ResponseEntity.badRequest().body(Map.of("error", "File gambar tidak boleh kosong"));
         }
         try {
-            Optional<MenuItem> optionalItem = menuService.getMenuItemById(menuId);
-            if (optionalItem.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            MenuItem item = optionalItem.get();
+            MenuItem item = menuService.getMenuItemById(menuId)
+                    .orElseThrow(() -> new RuntimeException("Menu item not found with id: " + menuId));
 
-            File uploadDirFile = new File(baseUploadPath, MENU_IMAGE_SUBDIR);
-            if (!uploadDirFile.exists()) {
-                if (!uploadDirFile.mkdirs()) {
-                    logger.error("Gagal membuat direktori upload: " + uploadDirFile.getAbsolutePath());
-                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Gagal membuat direktori upload."));
-                }
+            Path uploadPath = Paths.get(appUploadBasePath, UPLOADS_DIR_NAME, MENU_IMAGE_SUBDIR);
+            
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+                logger.info("Direktori upload dibuat: {}", uploadPath.toAbsolutePath());
             }
 
             String originalFileName = file.getOriginalFilename();
@@ -142,15 +122,14 @@ public class MenuController {
             }
             String filename = UUID.randomUUID().toString() + fileExtension;
             
-            File destinationFile = new File(uploadDirFile.getAbsolutePath(), filename);
-            file.transferTo(destinationFile);
+            Path destinationFile = uploadPath.resolve(filename);
+            Files.copy(file.getInputStream(), destinationFile);
 
-            String relativeImageUrl = "/" + "uploads" + "/" + MENU_IMAGE_SUBDIR + "/" + filename;
+            String relativeImageUrl = "/" + UPLOADS_DIR_NAME + "/" + MENU_IMAGE_SUBDIR + "/" + filename;
             item.setImageUrl(relativeImageUrl);
             menuService.updateMenuItem(item);
 
             Map<String, String> response = new HashMap<>();
-            response.put("message", "Image uploaded successfully");
             response.put("imageUrl", relativeImageUrl);
             return ResponseEntity.ok(response);
         } catch (IOException e) {
@@ -162,9 +141,6 @@ public class MenuController {
     @GetMapping("/count")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Long>> getMenuCount() {
-        long count = menuItemRepository.count();
-        Map<String, Long> response = new HashMap<>();
-        response.put("count", count);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of("count", menuItemRepository.count()));
     }
 }
